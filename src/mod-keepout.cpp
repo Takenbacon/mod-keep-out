@@ -29,7 +29,7 @@ public:
 
     void OnLogin(Player* player)
 {
-            if (sConfigMgr->GetBoolDefault("Announcer.Enable", true))
+            if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
     {
         ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keepout |rmodule.");
     }
@@ -41,7 +41,7 @@ public:
             if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
                 return;
 
-            QueryResult result = WorldDatabase.PQuery("SELECT `mapId` FROM `map_lock` WHERE `mapId` = '%u'", player->GetMapId());
+            QueryResult result = WorldDatabase.Query("SELECT `mapId` FROM `map_lock` WHERE `mapId` = '{}'", player->GetMapId());
 
             playername = player->GetName();
             mapId =  player->GetMap()->GetId();
@@ -52,7 +52,7 @@ public:
 
             do
             {
-                CharacterDatabase.PQuery("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('%s', '%u', '%u')", playername.c_str(), mapId, player->GetAreaId());
+                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', '{}', '{}')", playername.c_str(), mapId, player->GetAreaId());
                 ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
 
                 uint32& warninggiven = player->CustomData.GetDefault<Playerwarning>("warning")->warning;
@@ -78,14 +78,14 @@ public:
             if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
                 return;
 
-            QueryResult result = WorldDatabase.PQuery("SELECT `zoneID` FROM `map_lock` WHERE `zoneID` = '%u'", player->GetZoneId());
+            QueryResult result = WorldDatabase.Query("SELECT `zoneID` FROM `map_lock` WHERE `zoneID` = '{}'", player->GetZoneId());
 
             if (!result)
                 return;
 
             do
             {
-                CharacterDatabase.PQuery("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('%s', '%u', '%u')", playername.c_str(), mapId, player->GetAreaId());
+                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', '{}', '{}')", playername.c_str(), mapId, player->GetAreaId());
 
                 ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
 
@@ -115,8 +115,8 @@ public:
     void OnBeforeConfigLoad(bool reload) override
     {
         if (!reload) {
-            maxwarnings = sConfigMgr->GetIntDefault("MaxWarnings", 3);
-            KeepoutEnabled = sConfigMgr->GetBoolDefault("KeepOutEnabled", true);
+            maxwarnings = sConfigMgr->GetOption<int>("MaxWarnings", 3);
+            KeepoutEnabled = sConfigMgr->GetOption<bool>("KeepOutEnabled", true);
 
         }
     }
