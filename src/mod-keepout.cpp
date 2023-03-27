@@ -29,7 +29,7 @@ public:
 
     void OnLogin(Player* player)
 {
-            if (sConfigMgr->GetBoolDefault("Announcer.Enable", true))
+            if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
     {
         ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keepout |rmodule.");
     }
@@ -115,8 +115,8 @@ public:
     void OnBeforeConfigLoad(bool reload) override
     {
         if (!reload) {
-            maxwarnings = sConfigMgr->GetIntDefault("MaxWarnings", 3);
-            KeepoutEnabled = sConfigMgr->GetBoolDefault("KeepOutEnabled", true);
+            maxwarnings = sConfigMgr->GetOption<int>("MaxWarnings", 3);
+            KeepoutEnabled = sConfigMgr->GetOption<bool>("KeepOutEnabled", true);
 
         }
     }
