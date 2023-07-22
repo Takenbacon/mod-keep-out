@@ -18,22 +18,23 @@ public:
     uint32 warning = 1;
 };
 
-class Keepout : public PlayerScript
+class KeepOut : public PlayerScript
 {
 public:
-    Keepout() : PlayerScript("Keepout") { }
+    KeepOut() : PlayerScript("KeepOut") { }
 
     std::string playername;
     uint32 mapId;
     std::string maparea;
 
     void OnLogin(Player* player)
-{
-            if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
     {
-        ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keepout |rmodule.");
+        if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
+        {
+            ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keepout |rmodule.");
+        }
     }
-}
+
     void OnMapChanged(Player* player)
     {
         if (KeepoutEnabled)
@@ -41,7 +42,7 @@ public:
             if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
                 return;
 
-            QueryResult result = WorldDatabase.Query("SELECT `mapId` FROM `map_lock` WHERE `mapId` = '{}'", player->GetMapId());
+            QueryResult result = WorldDatabase.Query("SELECT `mapId` FROM `map_lock` WHERE `mapId`={}", player->GetMapId());
 
             playername = player->GetName();
             mapId =  player->GetMap()->GetId();
@@ -52,7 +53,7 @@ public:
 
             do
             {
-                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', '{}', '{}')", playername.c_str(), mapId, player->GetAreaId());
+                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', {}, {})", playername.c_str(), mapId, player->GetAreaId());
                 ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
 
                 uint32& warninggiven = player->CustomData.GetDefault<Playerwarning>("warning")->warning;
@@ -66,7 +67,6 @@ public:
                     player->TeleportTo(1, 1484.36f, -4417.93f, 24.4709f, 0.00f);
                 else
                     player->TeleportTo(0, -9075.6650f, 425.8427f, 93.0560f, 0.00f);
-
             } while (result->NextRow());
         }
     }
@@ -78,14 +78,14 @@ public:
             if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
                 return;
 
-            QueryResult result = WorldDatabase.Query("SELECT `zoneID` FROM `map_lock` WHERE `zoneID` = '{}'", player->GetZoneId());
+            QueryResult result = WorldDatabase.Query("SELECT `zoneID` FROM `map_lock` WHERE `zoneID`={}", player->GetZoneId());
 
             if (!result)
                 return;
 
             do
             {
-                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', '{}', '{}')", playername.c_str(), mapId, player->GetAreaId());
+                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', {}, {})", playername.c_str(), mapId, player->GetAreaId());
 
                 ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
 
@@ -100,30 +100,28 @@ public:
                     player->TeleportTo(1, 1484.36f, -4417.93f, 24.4709f, 0.00f);
                 else
                     player->TeleportTo(0, -9075.6650f, 425.8427f, 93.0560f, 0.00f);
-
             } while (result->NextRow());
-
         }
     }
 };
 
-class Keepout_conf : public WorldScript
+class KeepoutConf : public WorldScript
 {
 public:
-    Keepout_conf() : WorldScript("Keepout_conf") { }
+    KeepoutConf() : WorldScript("KeepoutConf") { }
 
     void OnBeforeConfigLoad(bool reload) override
     {
-        if (!reload) {
+        if (!reload)
+        {
             maxwarnings = sConfigMgr->GetOption<int>("MaxWarnings", 3);
             KeepoutEnabled = sConfigMgr->GetOption<bool>("KeepOutEnabled", true);
-
         }
     }
 };
 
 void AddKeepOutScripts()
 {
-    new Keepout_conf();
-    new Keepout();
+    new KeepoutConf();
+    new KeepOut();
 }
