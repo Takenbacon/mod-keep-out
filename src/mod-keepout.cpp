@@ -7,121 +7,126 @@
 #include "GossipDef.h"
 #include "Chat.h"
 
-uint32 maxwarnings;
-bool KeepoutEnabled;
-
-class Playerwarning : public DataMap::Base
+struct MKO
 {
-public:
-    Playerwarning() {}
-    Playerwarning(uint32 warning) : warning(warning) {}
-    uint32 warning = 1;
+    uint32 maxWarnings;
+    bool keepOutEnabled;
+    bool teleportEnabled;
+    bool kickEnabled;
 };
 
-class KeepOut : public PlayerScript
+MKO mko;
+
+void teleportPlayer(Player* player)
+{
+    if (player->GetTeamId() == TEAM_HORDE)
+    {
+        /* Orgrimmar */
+        player->TeleportTo(1, 1629.85f, -4373.64f, 31.5573f, 3.69762f);
+    }
+    else
+    {
+        /* Stormwind */
+        player->TeleportTo(0, -8833.38f, 628.628f, 94.0066f, 1.06535f);
+    }
+    ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
+}
+
+void checkZoneKeepOut(Player* player)
+{
+    if (player->GetSession()->GetSecurity() >= SEC_MODERATOR)
+        return;
+
+    uint32 mapId = player->GetMapId();
+    uint32 zoneId = player->GetZoneId();
+
+    QueryResult result = WorldDatabase.Query("SELECT * FROM `mod_mko_map_lock` WHERE `mapId`={} AND `zoneID`={}", mapId, zoneId);
+
+    if (!result)
+        return;
+
+    uint32 accountId = player->GetSession()->GetAccountId();
+    uint8 countWarnings = 1;
+
+    QueryResult playerWarning = CharacterDatabase.Query("SELECT * FROM `mod_mko_map_exploit` WHERE `accountId`={}", accountId);
+
+    if (!playerWarning)
+    {
+        CharacterDatabase.Execute("INSERT INTO `mod_mko_map_exploit` (`accountId`, `count`) VALUES ({}, {})", accountId, countWarnings);
+
+        if (mko.teleportEnabled)
+        {
+            teleportPlayer(player);
+        }
+    }
+    else
+    {
+        countWarnings = (*playerWarning)[1].Get<uint8>() + 1;
+
+        if (countWarnings <= mko.maxWarnings)
+        {
+            CharacterDatabase.Execute("UPDATE `mod_mko_map_exploit` SET `count`={} WHERE `accountId`={}", countWarnings, accountId);
+            teleportPlayer(player);
+        }
+        else
+        {
+            if (mko.teleportEnabled && !mko.kickEnabled)
+            {
+                teleportPlayer(player);
+            }
+            else if (mko.kickEnabled)
+            {
+                player->GetSession()->KickPlayer("MKO: Entering a place not allowed.", true);
+            }
+            else
+            {
+                ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
+            }
+        }
+    }
+}
+
+class KeepOutPlayerScript : public PlayerScript
 {
 public:
-    KeepOut() : PlayerScript("KeepOut") { }
+    KeepOutPlayerScript() : PlayerScript("KeepOutPlayerScript") { }
 
-    std::string playername;
-    uint32 mapId;
-    std::string maparea;
-
-    void OnLogin(Player* player)
+    void OnLogin(Player* player) override
     {
         if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
         {
-            ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keepout |rmodule.");
+            ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keep Out |rmodule.");
         }
     }
 
-    void OnMapChanged(Player* player)
+    void OnUpdateZone(Player* player, uint32 /*newZone*/,  uint32 /*newArea*/) override
     {
-        if (KeepoutEnabled)
+        if (mko.keepOutEnabled)
         {
-            if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
-                return;
-
-            QueryResult result = WorldDatabase.Query("SELECT `mapId` FROM `map_lock` WHERE `mapId`={}", player->GetMapId());
-
-            playername = player->GetName();
-            mapId =  player->GetMap()->GetId();
-            maparea = player->GetZoneId();
-
-            if (!result)
-                return;
-
-            do
-            {
-                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', {}, {})", playername.c_str(), mapId, player->GetAreaId());
-                ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
-
-                uint32& warninggiven = player->CustomData.GetDefault<Playerwarning>("warning")->warning;
-
-                if (warninggiven == maxwarnings)
-                    player->GetSession()->KickPlayer();
-                else
-                    warninggiven++;
-
-                if (player->GetTeamId() == TEAM_HORDE)
-                    player->TeleportTo(1, 1484.36f, -4417.93f, 24.4709f, 0.00f);
-                else
-                    player->TeleportTo(0, -9075.6650f, 425.8427f, 93.0560f, 0.00f);
-            } while (result->NextRow());
-        }
-    }
-
-    void OnUpdateZone(Player* player, uint32 /*newZone */,  uint32 /*newArea*/)
-    {
-        if (KeepoutEnabled)
-        {
-            if (player->GetSession()->GetSecurity() >= SEC_GAMEMASTER)
-                return;
-
-            QueryResult result = WorldDatabase.Query("SELECT `zoneID` FROM `map_lock` WHERE `zoneID`={}", player->GetZoneId());
-
-            if (!result)
-                return;
-
-            do
-            {
-                CharacterDatabase.Query("INSERT INTO `map_exploit` (`player`, `map`, `area`) VALUES ('{}', {}, {})", playername.c_str(), mapId, player->GetAreaId());
-
-                ChatHandler(player->GetSession()).PSendSysMessage("You have gone to a forbidden place your actions have been logged.");
-
-                uint32& warninggiven = player->CustomData.GetDefault<Playerwarning>("warning")->warning;
-
-                if (warninggiven == maxwarnings)
-                    player->GetSession()->KickPlayer();
-                else
-                    warninggiven++;
-
-                if (player->GetTeamId() == TEAM_HORDE)
-                    player->TeleportTo(1, 1484.36f, -4417.93f, 24.4709f, 0.00f);
-                else
-                    player->TeleportTo(0, -9075.6650f, 425.8427f, 93.0560f, 0.00f);
-            } while (result->NextRow());
+            checkZoneKeepOut(player);
         }
     }
 };
 
-class KeepoutConf : public WorldScript
+class KeepOutWorldScript : public WorldScript
 {
 public:
-    KeepoutConf() : WorldScript("KeepoutConf") { }
+    KeepOutWorldScript() : WorldScript("KeepOutWorldScript") { }
 
     void OnBeforeConfigLoad(bool reload) override
     {
         if (!reload)
         {
-            maxwarnings = sConfigMgr->GetOption<int>("MaxWarnings", 3);
-            KeepoutEnabled = sConfigMgr->GetOption<bool>("KeepOutEnabled", true);
+            mko.maxWarnings = sConfigMgr->GetOption<int>("MaxWarnings", 3);
+            mko.keepOutEnabled = sConfigMgr->GetOption<bool>("KeepOutEnabled", true);
+            mko.teleportEnabled = sConfigMgr->GetOption<bool>("KeepOutTeleportEnabled", true);
+            mko.kickEnabled = sConfigMgr->GetOption<bool>("KeepOutKickPlayerEnabled", true);
         }
     }
 };
 
 void AddKeepOutScripts()
 {
-    new KeepoutConf();
-    new KeepOut();
+    new KeepOutWorldScript();
+    new KeepOutPlayerScript();
 }

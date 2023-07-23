@@ -15,12 +15,21 @@ Module for azerothcore to keep players who are non gm entering a zone/map
 
 1. Simply place the module under the `modules` folder of your AzerothCore source folder.
 2. Re-run cmake and launch a clean build of AzerothCore
-3. Import the SQL manually or with the `db_assembler.sh`
+3. Run the `worldserver` and `authserver`, so that the changes are applied to the database.
 
 ## Usage
 
 - Enable this module in conf
-- Get the map ID and zone ID with ingame command `.gps`, then edit the table `map_lock` table.
+- Get the map ID and zone ID with ingame command `.gps`, then edit the table `mod_mko_map_lock` table.
+
+## Example
+
+```sql
+DELETE FROM `mod_mko_map_lock` WHERE `mapId`=571 AND `zoneID` IN (65, 3537);
+INSERT INTO `mod_mko_map_lock` (`mapId`, `zoneID`, `comment`) VALUES
+(571, 65, 'Dragonblight'),
+(571, 3537, 'Borean Tundra');
+```
 
 ## Credits
 
