@@ -14,6 +14,7 @@ enum class KeepOutConfig
     ENABLED,
     TELEPORT_ENABLED,
     KICK_ENABLED,
+    ANNOUNCER_ENABLED,
 
     NUM_CONFIGS,
 };
@@ -29,6 +30,7 @@ public:
         SetConfigValue<bool>(KeepOutConfig::ENABLED,            "KeepOutEnabled",           true);
         SetConfigValue<bool>(KeepOutConfig::TELEPORT_ENABLED,   "KeepOutTeleportEnabled",   true);
         SetConfigValue<bool>(KeepOutConfig::KICK_ENABLED,       "KeepOutKickPlayerEnabled", true);
+        SetConfigValue<bool>(KeepOutConfig::ANNOUNCER_ENABLED,  "Announcer.Enable",         true);
     }
 };
 
@@ -105,7 +107,7 @@ public:
 
     void OnPlayerLogin(Player* player) override
     {
-        if (sConfigMgr->GetOption<bool>("Announcer.Enable", true))
+        if (keepOutConfigData.GetConfigValue<bool>(KeepOutConfig::ANNOUNCER_ENABLED))
             ChatHandler(player->GetSession()).PSendSysMessage("This server is running the |cff4CFF00Keep Out |rmodule.");
     }
 
