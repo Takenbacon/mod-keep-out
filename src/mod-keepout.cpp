@@ -1,7 +1,7 @@
 #include "AccountMgr.h"
 #include "Chat.h"
 #include "Configuration/Config.h"
-#include "ConfigData.h"
+#include "ConfigValueCache.h"
 #include "Creature.h"
 #include "Define.h"
 #include "GossipDef.h"
@@ -19,10 +19,10 @@ enum class KeepOutConfig
     NUM_CONFIGS,
 };
 
-class KeepOutConfigData : public ConfigData<KeepOutConfig>
+class KeepOutConfigData : public ConfigValueCache<KeepOutConfig>
 {
 public:
-    KeepOutConfigData() : ConfigData(KeepOutConfig::NUM_CONFIGS) { };
+    KeepOutConfigData() : ConfigValueCache(KeepOutConfig::NUM_CONFIGS) { };
 
     void BuildConfigCache() override
     {
